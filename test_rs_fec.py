@@ -1,5 +1,13 @@
-from rs_fec import P, M, GF, gf_add, gf_sub, gf_mul, gf_inv, gf_div
+from rs_fec import P, M, PRIM_POLY, PRIM_ELEMENT, LOG_TABLE, EXP_TABLE
+from rs_fec import N, K, T, S
+from rs_fec import gf_add, gf_sub, gf_mul, gf_inv, gf_div
+from rs_fec import rs_enc
+
 import numpy as np
+import galois
+
+GF = galois.GF(P**M, irreducible_poly=PRIM_POLY, primitive_element=PRIM_ELEMENT)
+RS = galois.ReedSolomon(N, K)
 
 
 def test_gf_addition():
@@ -32,6 +40,22 @@ def test_gf_multiplication():
         assert result == expected, f"Expected {expected}, got {result}"
 
 
+def test_gf_log_table():
+    """Test the Galois Field log table."""
+    for i in range(0, P**M - 1):
+        expected = i
+        result = LOG_TABLE[GF(2) ** i]
+        assert expected == result, f"Expected {expected}, got {result}"
+
+
+def test_gf_exp_table():
+    """Test the Galois Field exponentiation table."""
+    for i in range(0, P**M - 1):
+        expected = GF(2) ** i
+        result = EXP_TABLE[i]
+        assert expected == result, f"Expected {expected}, got {result}"
+
+
 def test_gf_inverse():
     """Test the Galois Field inverse."""
     for _ in range(1000):
@@ -47,5 +71,16 @@ def test_gf_division():
         a = np.random.randint(0, P**M)
         b = np.random.randint(1, P**M)  # Avoid zero to prevent division by zero
         expected = GF(a) / GF(b)
-        result = gf_div(a, b)  # Division is multiplication by the inverse
+        result = gf_div(a, b)
         assert result == expected, f"Expected {expected}, got {result}"
+
+
+def test_rs_encoding():
+    """Test the Reed-Solomon encoding."""
+    for _ in range(1000):
+        msg = np.random.randint(0, P**M, size=K - S, dtype=np.int64)
+        expected = RS.encode(msg)
+        expected = expected[-T * 2 :]  # Get the last T * 2 elements as parity
+        result = rs_enc(msg)
+
+        assert np.array_equal(result, expected), f"Expected {expected}, got {result}"
