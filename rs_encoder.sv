@@ -133,16 +133,21 @@ module rs_encoder (
   logic       valid;
 
   generate
-    for (genvar i = 0; i < 64; i++) begin
+    for (genvar i = 0; i < 64; i++) begin : g_log_msg
 
       assign log_msg[i] = log_table[msg_in[i]];
       assign msg_z[i]   = (msg_in[i] == 0);
 
+    end
+  endgenerate
+
+  generate
+    for (genvar i = 0; i < 64; i++) begin : g_mul
       for (genvar j = 0; j < 4; j++) begin
 
         assign mul0[i][j] = log_msg[i] + g_table[i][j];
 
-        assign mul1[i][j] = (mul0[i][j] >= 255) ? (mul0[i][j] - 255) : mul0[i][j];
+        assign mul1[i][j] = (mul0[i][j][8] || &mul0[i][j][7:0]) ? (mul0[i][j] + 1'b1) : mul0[i][j];
 
         assign mul2[i][j] = msg_z[i] ? '0 : exp_table[mul1[i][j]];
 
@@ -152,7 +157,7 @@ module rs_encoder (
   endgenerate
 
   generate
-    for (genvar j = 0; j < 4; j++) begin
+    for (genvar j = 0; j < 4; j++) begin : g_add
 
       always_comb begin
         add[j] = '0;
@@ -160,6 +165,12 @@ module rs_encoder (
           add[j] = add[j] ^ mul2[i][j];
         end
       end
+
+    end
+  endgenerate
+
+  generate
+    for (genvar j = 0; j < 4; j++) begin : g_parity
 
       always_ff @(posedge clk) begin
         parity[j] <= add[j];
