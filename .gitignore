@@ -1,3 +1,11 @@
-__pycache__
-.pytest_cache
-.venv
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+
+# Vivado
+project_1/
+
+# Cocotb
+sim_build/
+transcript

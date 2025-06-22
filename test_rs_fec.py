@@ -1,4 +1,4 @@
-from rs_fec import P, M, PRIM_POLY, PRIM_ELEMENT, LOG_TABLE, EXP_TABLE
+from rs_fec import P, M, PRIM_POLY, PRIM_ELEMENT, LOG_TABLE, EXP_TABLE, LOG_G
 from rs_fec import N, K, T, S
 from rs_fec import gf_add, gf_sub, gf_mul, gf_inv, gf_div
 from rs_fec import rs_enc
@@ -75,10 +75,21 @@ def test_gf_division():
         assert result == expected, f"Expected {expected}, got {result}"
 
 
+def test_log_g_table():
+    """Test the Log G table."""
+    result = LOG_G
+    G = RS.G[-64:, -4:]
+    expected = np.zeros((K - S, T * 2))
+    for i in range(K - S):
+        for j in range(T * 2):
+            expected[i, j] = LOG_TABLE[G[i, j]]
+    assert np.array_equal(result, expected)
+
+
 def test_rs_encoding():
     """Test the Reed-Solomon encoding."""
     for _ in range(1000):
-        msg = np.random.randint(0, P**M, size=K - S, dtype=np.int64)
+        msg = np.random.randint(0, P**M, size=K - S, dtype=int)
         expected = RS.encode(msg)
         expected = expected[-T * 2 :]  # Get the last T * 2 elements as parity
         result = rs_enc(msg)
