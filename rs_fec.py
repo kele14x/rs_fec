@@ -215,7 +215,7 @@ def gf_sub(a: int, b: int) -> int:
     return gf_add(a, b)
 
 
-def gf_mul(a: int, b: int) -> int:
+def gf_mul_v1(a: int, b: int) -> int:
     """GF(2^8) multiplication"""
     if a != a & 0xFF:
         raise ValueError("a is not a valid GF(2^8) element")
@@ -230,6 +230,27 @@ def gf_mul(a: int, b: int) -> int:
     log_result = (log_a + log_b) % (P**M - 1)
     return int(EXP_TABLE[log_result])
 
+
+def gf_mul_v2(a: int, b: int) -> int:
+    """GF(2^8) multiplication"""
+    if a != a & 0xFF:
+        raise ValueError("a is not a valid GF(2^8) element")
+    if b != b & 0xFF:
+        raise ValueError("b is not a valid GF(2^8) element")
+
+    p = 0
+    for _ in range(8):
+        if b & 0x1:
+            p ^= a
+        a <<= 1
+        if a & 0x100:  # If a is greater than 255,
+            a ^= PRIM_POLY  # reduce it by the primitive polynomial
+        b >>= 1
+    return p
+
+
+def gf_mul(a: int, b: int) -> int:
+    return gf_mul_v2(a, b)
 
 def gf_inv(a: int) -> int:
     """GF(2^8) multiplicative inverse"""

@@ -9,3 +9,6 @@ project_1/
 # Cocotb
 sim_build/
 transcript
+
+# MacOS
+.DS_Store
