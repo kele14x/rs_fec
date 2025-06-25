@@ -82,7 +82,7 @@ module rs_encoder (
   };
   // verilog_format: on
 
-  function automatic logic [7:0] gf_mul(logic [7:0] a, logic [7:0] b);
+  function automatic logic [7:0] gf_mul(input logic [7:0] a, input logic [7:0] b);
     begin
       gf_mul = 8'd0;
       for (int i = 0; i < 8; i++) begin
