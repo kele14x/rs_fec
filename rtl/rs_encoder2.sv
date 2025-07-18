@@ -6,15 +6,18 @@ module rs_encoder (
     input  wire       clk,
     input  wire       rst_n,
     //
-    input  wire [7:0] msg_in      [64],
-    input  wire       msg_valid,
+    input  wire [7:0] msg_in    [64],
+    input  wire       vld_in,
     //
-    output wire [7:0] parity_out  [ 4],
-    output wire       parity_valid
+    output wire [7:0] msg_out   [64],
+    output wire [7:0] parity_out[ 4],
+    output wire       vld_out
 );
 
+  localparam logic [7:0] prim = 8'h1d;
+
   // verilog_format: off
-  reg [7:0] g_table [64][4] = '{
+  localparam logic [7:0] g_table [64][4] = '{
     {241,  12, 191,  74},
     { 12, 121, 197, 111},
     { 10, 192,  90, 125},
@@ -82,32 +85,53 @@ module rs_encoder (
   };
   // verilog_format: on
 
-  function automatic logic [7:0] gf_mul(input logic [7:0] a, input logic [7:0] b);
-    begin
-      gf_mul = 8'd0;
-      for (int i = 0; i < 8; i++) begin
-        if (b[i]) begin
-          gf_mul = gf_mul ^ a;
-        end
-        if (a[7]) begin
-          a = (a << 1) ^ 8'h1D;  // x^8 + x^4 + x^3 + x^2 + 1
-        end else begin
-          a = a << 1;
-        end
-      end
-    end
-  endfunction
+  logic [7:0] msg_reg [64];
+  logic       vld_reg;
 
-  logic [7:0] mul    [64] [4];
-  logic [7:0] add    [ 4];
-  logic [7:0] parity [ 4];
+  logic [7:0] msg_a0  [64];
+  logic [7:0] msg_a1  [64];
+  logic [7:0] msg_a2  [64];
+  logic [7:0] msg_a3  [64];
+  logic [7:0] msg_a4  [64];
+  logic [7:0] msg_a5  [64];
+  logic [7:0] msg_a6  [64];
+  logic [7:0] msg_a7  [64];
+
+  logic [7:0] mul     [64] [4];
+  logic [7:0] add     [ 4];
+  logic [7:0] msg_r2  [64];
+  logic [7:0] parity  [ 4];
   logic       valid;
+
+  // Input registers
+  always_ff @(posedge clk) begin
+    msg_reg <= msg_in;
+    vld_reg <= vld_in;
+  end
 
   generate
     for (genvar i = 0; i < 64; i++) begin : g_mul
+
+      assign msg_a0[i] = msg_reg[i];
+      assign msg_a1[i] = {msg_a0[i][6:0], 1'b0} ^ (msg_a0[i][7] ? prim : 8'b0);
+      assign msg_a2[i] = {msg_a1[i][6:0], 1'b0} ^ (msg_a1[i][7] ? prim : 8'b0);
+      assign msg_a3[i] = {msg_a2[i][6:0], 1'b0} ^ (msg_a2[i][7] ? prim : 8'b0);
+      assign msg_a4[i] = {msg_a3[i][6:0], 1'b0} ^ (msg_a3[i][7] ? prim : 8'b0);
+      assign msg_a5[i] = {msg_a4[i][6:0], 1'b0} ^ (msg_a4[i][7] ? prim : 8'b0);
+      assign msg_a6[i] = {msg_a5[i][6:0], 1'b0} ^ (msg_a5[i][7] ? prim : 8'b0);
+      assign msg_a7[i] = {msg_a6[i][6:0], 1'b0} ^ (msg_a6[i][7] ? prim : 8'b0);
+
       for (genvar j = 0; j < 4; j++) begin
 
-        assign mul[i][j] = gf_mul(msg_in[i], g_table[i][j]);
+        assign mul[i][j] =
+          (g_table[i][j][0] ? msg_a0[i] : 8'b0) ^
+          (g_table[i][j][1] ? msg_a1[i] : 8'b0) ^
+          (g_table[i][j][2] ? msg_a2[i] : 8'b0) ^
+          (g_table[i][j][3] ? msg_a3[i] : 8'b0) ^
+          (g_table[i][j][4] ? msg_a4[i] : 8'b0) ^
+          (g_table[i][j][5] ? msg_a5[i] : 8'b0) ^
+          (g_table[i][j][6] ? msg_a6[i] : 8'b0) ^
+          (g_table[i][j][7] ? msg_a7[i] : 8'b0);
 
       end
     end
@@ -126,6 +150,12 @@ module rs_encoder (
     end
   endgenerate
 
+  always_ff @(posedge clk) begin
+    msg_r2 <= msg_reg;
+  end
+
+  assign msg_out = msg_r2;
+
   generate
     for (genvar j = 0; j < 4; j++) begin : g_parity
 
@@ -139,10 +169,10 @@ module rs_encoder (
   endgenerate
 
   always_ff @(posedge clk) begin
-    valid <= msg_valid;
+    valid <= vld_reg;
   end
 
-  assign parity_valid = valid;
+  assign vld_out = valid;
 
 endmodule
 
