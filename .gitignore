@@ -3,12 +3,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 
-# Vivado
-project_1/
-
-# Cocotb
-sim_build/
-transcript
-
 # MacOS
 .DS_Store
+
+# Project
+*.csv
